@@ -1,6 +1,7 @@
 package com.hestonliebowitz.labelmaker
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
@@ -24,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -263,6 +266,26 @@ fun SettingsPreview() {
     }
 }
 
+@Preview(
+    showBackground = false,
+    widthDp = 320,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark"
+)
+@Composable
+fun DarkSettingsPreview() {
+    LabelMakerTheme {
+        Settings(
+            Settings(
+                endpoint = "https://foo.bar/baz",
+                authToken = "asdf"
+            ),
+            onSettingsChanged = {},
+            onCancel = {}
+        )
+    }
+}
+
 @Composable
 fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
     var lastTextValue by remember { mutableStateOf("") }
@@ -284,7 +307,9 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
                         Icon(
                             painter=painterResource(id = R.drawable.baseline_label_24),
                             contentDescription = stringResource(R.string.app_name),
-                            modifier = Modifier.padding(end = 8.dp)
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .align(Alignment.CenterVertically)
                         )
                         Text(text = stringResource(R.string.app_name))
                     }
@@ -322,17 +347,20 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
                 },
                 modifier = Modifier
                     .padding(16.dp),
-                textStyle = MaterialTheme.typography.h1,
+                textStyle = MaterialTheme.typography.h1.copy(
+                    color = MaterialTheme.colors.onBackground
+                ),
                 singleLine = false,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { submit() }),
+                cursorBrush = SolidColor(MaterialTheme.colors.secondary),
                 decorationBox = { innerTextField ->
                     Box {
                         if (lastTextValue.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.placeholder),
                                 style = MaterialTheme.typography.h1,
-                                color = Color.LightGray
+                                color = MaterialTheme.colors.secondary
                             )
                         }
                         innerTextField()
@@ -347,6 +375,22 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
+    LabelMakerTheme {
+        MainApp(
+            onPrint = {},
+            onChangeSettings = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = false,
+    widthDp = 320,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark"
+)
+@Composable
+fun DarkPreview() {
     LabelMakerTheme {
         MainApp(
             onPrint = {},
