@@ -7,46 +7,69 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Print
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.hestonliebowitz.labelmaker.ui.theme.LabelMakerTheme
-import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.hestonliebowitz.labelmaker.ui.theme.LabelMakerTheme
 import kotlinx.coroutines.launch
 
-import io.ktor.client.*
+import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+
 import org.json.JSONArray
 import org.json.JSONObject
+
 
 data class Settings(var endpoint: String, var authToken: String)
 
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalAnimationApi::class)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -82,7 +105,7 @@ class MainActivity : ComponentActivity() {
         }
 
         fun fullSend(label: String?) {
-            if (label == null || label.isEmpty()) {
+            if (label.isNullOrEmpty()) {
                 Toast
                     .makeText(
                         applicationContext,
@@ -206,7 +229,7 @@ fun Settings(
                     onClick = onCancel
                 ) {
                     Icon(
-                        Icons.Filled.Close,
+                        Icons.Outlined.Close,
                         contentDescription = stringResource(R.string.close)
                     )
                 }
@@ -223,7 +246,7 @@ fun Settings(
                 onValueChange = {
                     endpointValue = it
                     settings.endpoint = it
-                                },
+                },
                 label = {
                     Text(stringResource(R.string.label_printer_endpoint))
                 },
@@ -237,7 +260,7 @@ fun Settings(
                 onValueChange = {
                     authTokenValue = it
                     settings.authToken = it
-                                },
+                },
                 label = {
                     Text(stringResource(R.string.label_auth_token))
                 },
@@ -266,7 +289,6 @@ fun SettingsPreview() {
 
 @Preview(
     showBackground = false,
-    widthDp = 320,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     name = "Dark"
 )
@@ -284,26 +306,29 @@ fun DarkSettingsPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
     var lastTextValue by remember { mutableStateOf("") }
     var defaultTextChanged by remember { mutableStateOf(false) }
-    val scaffoldState = rememberScaffoldState()
     val focusManager = LocalFocusManager.current
 
     fun submit() {
         focusManager.clearFocus()
         onPrint(if (defaultTextChanged) lastTextValue else null)
     }
-    
+
     Scaffold(
-        scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
+                colors = topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                ),
                 title = {
                     Row {
                         Icon(
-                            painter=painterResource(id = R.drawable.baseline_label_24),
+                            painter= painterResource(id = R.drawable.baseline_label_24),
                             contentDescription = stringResource(R.string.app_name),
                             modifier = Modifier
                                 .padding(end = 8.dp)
@@ -318,8 +343,9 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
                         onChangeSettings()
                     }) {
                         Icon(
-                            Icons.Filled.MoreVert,
-                            contentDescription = stringResource(R.string.settings)
+                            Icons.Outlined.MoreVert,
+                            contentDescription = stringResource(R.string.settings),
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -327,12 +353,12 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
         },
         floatingActionButton = { FloatingActionButton(
             onClick = { submit() },
-            backgroundColor = MaterialTheme.colors.primary
+            containerColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(
-                Icons.Filled.Print,
+                Icons.Default.Print,
                 contentDescription = stringResource(R.string.print),
-                tint = MaterialTheme.colors.onPrimary
+                tint = MaterialTheme.colorScheme.onPrimary
             )
         }}
     ) {contentPadding ->
@@ -345,20 +371,20 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
                 },
                 modifier = Modifier
                     .padding(16.dp),
-                textStyle = MaterialTheme.typography.h1.copy(
-                    color = MaterialTheme.colors.onBackground
+                textStyle = MaterialTheme.typography.headlineLarge.copy(
+                    color = MaterialTheme.colorScheme.onBackground
                 ),
                 singleLine = false,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { submit() }),
-                cursorBrush = SolidColor(MaterialTheme.colors.secondary),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.secondary),
                 decorationBox = { innerTextField ->
                     Box {
                         if (lastTextValue.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.placeholder),
-                                style = MaterialTheme.typography.h1,
-                                color = MaterialTheme.colors.secondary
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.secondary
                             )
                         }
                         innerTextField()
@@ -366,7 +392,7 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
                 }
             )
         }
-        
+
     }
 }
 
@@ -383,7 +409,6 @@ fun DefaultPreview() {
 
 @Preview(
     showBackground = false,
-    widthDp = 320,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     name = "Dark"
 )
