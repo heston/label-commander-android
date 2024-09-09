@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -33,6 +35,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +45,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,13 +74,15 @@ import org.json.JSONObject
 
 data class Settings(var endpoint: String, var authToken: String)
 
+const val DEFAULT = "default"
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         fun getSettings(): Settings {
-            val prefs = getPreferences(Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences(DEFAULT, Context.MODE_PRIVATE)
             return Settings(
                 endpoint = prefs.getString(
                     getString(R.string.pref_endpoint),
@@ -91,7 +99,7 @@ class MainActivity : ComponentActivity() {
         val initialShowSettings = initialSettings.endpoint.isEmpty() || initialSettings.authToken.isEmpty()
 
         fun saveSettings(settings: Settings) {
-            val prefs = getPreferences(Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences(DEFAULT, Context.MODE_PRIVATE)
             val editor = prefs.edit()
             editor.putString(
                 getString(R.string.pref_endpoint),
@@ -104,8 +112,8 @@ class MainActivity : ComponentActivity() {
             editor.apply()
         }
 
-        fun fullSend(label: String?) {
-            if (label.isNullOrEmpty()) {
+        fun fullSend(value: String?, qty: Int = 1) {
+            if (value.isNullOrEmpty()) {
                 Toast
                     .makeText(
                         applicationContext,
@@ -123,8 +131,8 @@ class MainActivity : ComponentActivity() {
                 var message: String
 
                 val labelObj = JSONObject()
-                labelObj.put("body", label)
-                labelObj.put("qty", 1)
+                labelObj.put("body", value)
+                labelObj.put("qty", qty)
                 val requestBody = JSONObject()
                 requestBody.put("items", JSONArray(listOf(labelObj)))
 
@@ -168,8 +176,8 @@ class MainActivity : ComponentActivity() {
             LabelMakerTheme {
                 var showSettings by remember { mutableStateOf(initialShowSettings) }
                 MainApp(
-                    onPrint = {
-                        fullSend(it)
+                    onPrint = { value, qty ->
+                        fullSend(value, qty)
                     },
                     onChangeSettings = {
                         hideKeyboard()
@@ -279,7 +287,7 @@ fun SettingsPreview() {
         Settings(
             Settings(
                 endpoint = "https://foo.bar/baz",
-                authToken = "asdf"
+                authToken = "<auth_token>"
             ),
             onSettingsChanged = {},
             onCancel = {}
@@ -298,7 +306,7 @@ fun DarkSettingsPreview() {
         Settings(
             Settings(
                 endpoint = "https://foo.bar/baz",
-                authToken = "asdf"
+                authToken = "<auth_token>"
             ),
             onSettingsChanged = {},
             onCancel = {}
@@ -308,14 +316,15 @@ fun DarkSettingsPreview() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
+fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () -> Unit, defaultQty: Int = 1) {
     var lastTextValue by remember { mutableStateOf("") }
     var defaultTextChanged by remember { mutableStateOf(false) }
+    var printQty by remember { mutableIntStateOf(defaultQty) }
     val focusManager = LocalFocusManager.current
 
     fun submit() {
         focusManager.clearFocus()
-        onPrint(if (defaultTextChanged) lastTextValue else null)
+        onPrint(if (defaultTextChanged) lastTextValue else null, printQty)
     }
 
     Scaffold(
@@ -328,39 +337,81 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
                 title = {
                     Row {
                         Icon(
-                            painter= painterResource(id = R.drawable.baseline_label_24),
+                            painter = painterResource(id = R.drawable.baseline_label_24),
                             contentDescription = stringResource(R.string.app_name),
                             modifier = Modifier
                                 .padding(end = 8.dp)
-                                .align(Alignment.CenterVertically)
+                                .align(Alignment.CenterVertically),
                         )
                         Text(text = stringResource(R.string.app_name))
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        focusManager.clearFocus()
-                        onChangeSettings()
-                    }) {
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            onChangeSettings()
+                        },
+                    ) {
                         Icon(
                             Icons.Outlined.MoreVert,
                             contentDescription = stringResource(R.string.settings),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                }
+                },
             )
         },
-        floatingActionButton = { FloatingActionButton(
-            onClick = { submit() },
-            containerColor = MaterialTheme.colorScheme.primary
-        ) {
-            Icon(
-                Icons.Default.Print,
-                contentDescription = stringResource(R.string.print),
-                tint = MaterialTheme.colorScheme.onPrimary
+        bottomBar = {
+            BottomAppBar(
+                actions = {
+                    SingleChoiceSegmentedButtonRow {
+                        SegmentedButton(
+                            selected = printQty == 1,
+                            onClick = { printQty = 1 },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = 0,
+                                count = 3
+                            )
+                        ) {
+                            Text(stringResource(R.string.digit_1))
+                        }
+                        SegmentedButton(
+                            selected = printQty == 2,
+                            onClick = { printQty = 2 },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = 1,
+                                count = 3
+                            )
+                        ) {
+                            Text(stringResource(R.string.digit_2))
+                        }
+                        SegmentedButton(
+                            selected = printQty == 3,
+                            onClick = { printQty = 3 },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = 2,
+                                count = 3
+                            )
+                        ) {
+                            Text(stringResource(R.string.digit_3))
+                        }
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    FloatingActionButton(
+                        onClick = { submit() },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 10.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Print,
+                            contentDescription = stringResource(R.string.print),
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                },
             )
-        }}
+        },
     ) {contentPadding ->
         Surface(modifier = Modifier.padding(contentPadding)) {
             BasicTextField(
@@ -401,8 +452,9 @@ fun MainApp(onPrint: (value: String?) -> Unit, onChangeSettings: () -> Unit) {
 fun DefaultPreview() {
     LabelMakerTheme {
         MainApp(
-            onPrint = {},
-            onChangeSettings = {}
+            onPrint = { _, _ ->},
+            onChangeSettings = {},
+            defaultQty = 3
         )
     }
 }
@@ -416,8 +468,9 @@ fun DefaultPreview() {
 fun DarkPreview() {
     LabelMakerTheme {
         MainApp(
-            onPrint = {},
-            onChangeSettings = {}
+            onPrint = {_, _ ->},
+            onChangeSettings = {},
+            defaultQty = 2
         )
     }
 }

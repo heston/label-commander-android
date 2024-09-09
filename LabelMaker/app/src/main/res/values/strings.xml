@@ -12,4 +12,7 @@
     <string name="empty_error">Enter a label first</string>
     <string name="label_printer_endpoint">Printer Endpoint</string>
     <string name="label_auth_token">Authorization Token</string>
+    <string name="digit_1">I</string>
+    <string name="digit_2">II</string>
+    <string name="digit_3">III</string>
 </resources>
