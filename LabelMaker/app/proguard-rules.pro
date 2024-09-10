@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Ktor has a transitive dependency on this
+-dontwarn org.slf4j.impl.StaticLoggerBinder
