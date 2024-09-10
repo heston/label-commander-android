@@ -11,8 +11,8 @@ android {
         applicationId = "com.hestonliebowitz.labelmaker"
         minSdk = 31
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -40,6 +40,12 @@ android {
                 // Includes a local, custom Proguard rules file
                 "proguard-rules.pro"
             )
+
+            isDebuggable = false
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = true
         }
     }
     compileOptions {
@@ -53,7 +59,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
         resources {
