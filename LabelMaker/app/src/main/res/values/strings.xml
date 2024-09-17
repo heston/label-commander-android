@@ -15,4 +15,5 @@
     <string name="digit_1">I</string>
     <string name="digit_2">II</string>
     <string name="digit_3">III</string>
+    <string name="reset">Reset</string>
 </resources>
