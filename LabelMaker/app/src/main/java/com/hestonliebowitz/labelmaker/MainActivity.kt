@@ -17,13 +17,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
@@ -327,6 +330,12 @@ fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () ->
         onPrint(if (defaultTextChanged) lastTextValue else null, printQty)
     }
 
+    fun reset() {
+        lastTextValue = "";
+        printQty = 1;
+        defaultTextChanged = false;
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -365,6 +374,17 @@ fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () ->
         bottomBar = {
             BottomAppBar(
                 actions = {
+                    IconButton(
+                        onClick = { reset() },
+                        modifier = Modifier.padding(start = 4.dp, end = 12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.reset),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp))
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                     SingleChoiceSegmentedButtonRow {
                         SegmentedButton(
                             selected = printQty == 1,
@@ -413,7 +433,10 @@ fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () ->
             )
         },
     ) {contentPadding ->
-        Surface(modifier = Modifier.padding(contentPadding)) {
+        Surface(
+            modifier = Modifier
+                .padding(contentPadding)
+                .fillMaxHeight()) {
             BasicTextField(
                 value = lastTextValue,
                 onValueChange = {
@@ -421,7 +444,8 @@ fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () ->
                     defaultTextChanged = true
                 },
                 modifier = Modifier
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .fillMaxHeight(),
                 textStyle = MaterialTheme.typography.headlineLarge.copy(
                     color = MaterialTheme.colorScheme.onBackground
                 ),
