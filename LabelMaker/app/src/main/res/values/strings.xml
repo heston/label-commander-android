@@ -2,6 +2,7 @@
     <string name="app_name">Label Maker</string>
     <string name="pref_endpoint">pref_endpoint</string>
     <string name="pref_auth_token">pref_auth_token</string>
+    <string name="pref_history">pref_history</string>
     <string name="settings">Settings</string>
     <string name="print">Print</string>
     <string name="placeholder">Type label here...</string>
@@ -16,4 +17,9 @@
     <string name="digit_2">II</string>
     <string name="digit_3">III</string>
     <string name="reset">Reset</string>
+    <string name="reset_history">Delete All History</string>
+    <string name="history_cleared">All history deleted</string>
+    <string name="confirm_deletion">Confirm Deletion</string>
+    <string name="confirm_deletion_explanation">Are you sure you want to delete all label history? This action cannot be undone.</string>
+    <string name="cancel">Cancel</string>
 </resources>

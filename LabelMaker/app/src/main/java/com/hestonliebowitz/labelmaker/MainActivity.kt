@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,15 +23,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedSuggestionChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -49,17 +55,26 @@ import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.hestonliebowitz.labelmaker.ui.theme.LabelMakerTheme
@@ -101,6 +116,9 @@ class MainActivity : ComponentActivity() {
         val initialSettings = getSettings()
         val initialShowSettings = initialSettings.endpoint.isEmpty() || initialSettings.authToken.isEmpty()
 
+        val history = HistoryService(applicationContext)
+        val historyItems = mutableStateListOf(*history.getAll().toTypedArray())
+
         fun saveSettings(settings: Settings) {
             val prefs = getSharedPreferences(DEFAULT, Context.MODE_PRIVATE)
             val editor = prefs.edit()
@@ -113,6 +131,11 @@ class MainActivity : ComponentActivity() {
                 settings.authToken
             )
             editor.apply()
+        }
+
+        fun resetHistoryView() {
+            historyItems.clear()
+            historyItems.addAll(history.getAll())
         }
 
         fun fullSend(value: String?, qty: Int = 1) {
@@ -147,16 +170,17 @@ class MainActivity : ComponentActivity() {
                         contentType(ContentType.Application.Json)
                         setBody(requestBody.toString())
                     }
-
-                    message = if (response.status == HttpStatusCode.OK) {
-                        getString(R.string.print_success)
+                    if (response.status == HttpStatusCode.OK) {
+                        history.save(value)
+                        message = getString(R.string.print_success)
                     } else {
-                        "${getString(R.string.print_error)}: ${response.status.description}"
+                        message = "${getString(R.string.print_error)}: ${response.status.description}"
                     }
                 } catch (e: Throwable) {
                     message = "${getString(R.string.print_error)}: $e"
                 }
 
+                client.close()
                 Toast
                     .makeText(
                         applicationContext,
@@ -164,7 +188,6 @@ class MainActivity : ComponentActivity() {
                         Toast.LENGTH_LONG
                     )
                     .show()
-                client.close()
             }
         }
 
@@ -185,7 +208,9 @@ class MainActivity : ComponentActivity() {
                     onChangeSettings = {
                         hideKeyboard()
                         showSettings = true
-                    }
+                    },
+                    defaultQty = 1,
+                    historyItems = historyItems
                 )
 
                 var viewSettings by remember { mutableStateOf(initialSettings) }
@@ -203,7 +228,19 @@ class MainActivity : ComponentActivity() {
                         },
                         onCancel = {
                             showSettings = false
-                        }
+                        },
+                        resetHistory = {
+                            history.deleteAll()
+                            resetHistoryView()
+                            Toast
+                                .makeText(
+                                    applicationContext,
+                                    getString(R.string.history_cleared),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        },
+                        historyItems = historyItems
                     )
                 }
             }
@@ -215,10 +252,13 @@ class MainActivity : ComponentActivity() {
 fun Settings(
     settings: Settings,
     onSettingsChanged: (settings: Settings) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    resetHistory: () -> Unit,
+    historyItems: SnapshotStateList<String>
 ) {
     var endpointValue by remember { mutableStateOf(settings.endpoint) }
     var authTokenValue by remember { mutableStateOf(settings.authToken) }
+    var showDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
@@ -227,7 +267,7 @@ fun Settings(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.Top,
@@ -279,6 +319,39 @@ fun Settings(
                     .fillMaxWidth()
                     .padding(16.dp)
             )
+            Spacer(modifier = Modifier.weight(1f))
+            Row (
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(
+                    enabled = historyItems.isNotEmpty(),
+                    onClick = { showDialog = true }) {
+                    Text(text = stringResource(R.string.reset_history))
+                }
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        icon = { Icon(Icons.Filled.Warning, contentDescription = "Danger", tint = MaterialTheme.colorScheme.primary) },
+                        title = { Text(stringResource(id = R.string.confirm_deletion)) },
+                        text = { Text(stringResource(id = R.string.confirm_deletion_explanation)) },
+                        confirmButton = {
+                            Button(onClick = {
+                                // Perform the action here
+                                resetHistory()
+                                showDialog = false
+                            }) {
+                                Text(stringResource(id = R.string.reset_history))
+                            }
+                        },
+                        dismissButton = {
+                            Button(onClick = { showDialog = false }) {
+                                Text(stringResource(id = R.string.cancel))
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -286,6 +359,7 @@ fun Settings(
 @Preview
 @Composable
 fun SettingsPreview() {
+    val items = remember { mutableStateListOf<String>() }
     LabelMakerTheme {
         Settings(
             Settings(
@@ -293,7 +367,9 @@ fun SettingsPreview() {
                 authToken = "<auth_token>"
             ),
             onSettingsChanged = {},
-            onCancel = {}
+            onCancel = {},
+            resetHistory = {},
+            historyItems = items
         )
     }
 }
@@ -305,6 +381,7 @@ fun SettingsPreview() {
 )
 @Composable
 fun DarkSettingsPreview() {
+    val items = remember { mutableStateListOf("Item") }
     LabelMakerTheme {
         Settings(
             Settings(
@@ -312,18 +389,26 @@ fun DarkSettingsPreview() {
                 authToken = "<auth_token>"
             ),
             onSettingsChanged = {},
-            onCancel = {}
+            onCancel = {},
+            resetHistory = {},
+            historyItems = items
         )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () -> Unit, defaultQty: Int = 1) {
+fun MainApp(
+    onPrint: (value: String?, qty: Int) -> Unit,
+    onChangeSettings: () -> Unit,
+    defaultQty: Int = 1,
+    historyItems: SnapshotStateList<String> = mutableStateListOf()
+) {
     var lastTextValue by remember { mutableStateOf("") }
     var defaultTextChanged by remember { mutableStateOf(false) }
     var printQty by remember { mutableIntStateOf(defaultQty) }
     val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
 
     fun submit() {
         focusManager.clearFocus()
@@ -331,9 +416,44 @@ fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () ->
     }
 
     fun reset() {
-        lastTextValue = "";
-        printQty = 1;
-        defaultTextChanged = false;
+        lastTextValue = ""
+        printQty = 1
+        defaultTextChanged = false
+    }
+
+    fun Modifier.horizontalFade(
+        fadeWidth: Dp = 8.dp,
+        fadeOffset: Dp = 8.dp
+    ): Modifier {
+        return graphicsLayer {
+            compositingStrategy = CompositingStrategy.Offscreen
+        }.drawWithContent {
+            drawContent()
+            // Left fade
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.Black
+                    ),
+                    startX = fadeOffset.toPx(),
+                    endX = fadeOffset.toPx() + fadeWidth.toPx()
+                ),
+                blendMode = BlendMode.DstIn
+            )
+            // Right fade
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Black,
+                        Color.Transparent
+                    ),
+                    startX = size.width - fadeOffset.toPx() - fadeWidth.toPx(),
+                    endX = size.width - fadeOffset.toPx()
+                ),
+                blendMode = BlendMode.DstIn
+            )
+        }
     }
 
     Scaffold(
@@ -433,52 +553,88 @@ fun MainApp(onPrint: (value: String?, qty: Int) -> Unit, onChangeSettings: () ->
             )
         },
     ) {contentPadding ->
-        Surface(
+        Column(
             modifier = Modifier
                 .padding(contentPadding)
-                .fillMaxHeight()) {
-            BasicTextField(
-                value = lastTextValue,
-                onValueChange = {
-                    lastTextValue = it
-                    defaultTextChanged = true
-                },
+        ) {
+            Box(
                 modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxHeight(),
-                textStyle = MaterialTheme.typography.headlineLarge.copy(
-                    color = MaterialTheme.colorScheme.onBackground
-                ),
-                singleLine = false,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { submit() }),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.secondary),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (lastTextValue.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.placeholder),
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                        innerTextField()
+                    .fillMaxWidth()
+                    .horizontalFade()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(start = 0.dp, top = 8.dp, end = 0.dp)
+                        .horizontalScroll(scrollState),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    for (item in historyItems) {
+                        ElevatedSuggestionChip(
+                            modifier = Modifier.padding(
+                                start = if (item == historyItems.first()) 16.dp else 0.dp,
+                                end = if (item == historyItems.last()) 16.dp else 0.dp
+                            ),
+                            onClick = {
+                                lastTextValue = item
+                                defaultTextChanged = true
+                            },
+                            label = { Text(item) }
+                        )
                     }
                 }
-            )
+            }
+            Surface(
+                modifier = Modifier
+                    .padding(0.dp)
+                    .fillMaxHeight()
+                    ) {
+                BasicTextField(
+                    value = lastTextValue,
+                    onValueChange = {
+                        lastTextValue = it
+                        defaultTextChanged = true
+                    },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxHeight(),
+                    textStyle = MaterialTheme.typography.headlineLarge.copy(
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    singleLine = false,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = { submit() }),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.secondary),
+                    decorationBox = { innerTextField ->
+                        Box {
+                            if (lastTextValue.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.placeholder),
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+            }
         }
-
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
+    val history = remember {
+        mutableStateListOf("A recent label", "Another label", "Third", "Fourth")
+    }
     LabelMakerTheme {
         MainApp(
             onPrint = { _, _ ->},
             onChangeSettings = {},
-            defaultQty = 3
+            defaultQty = 3,
+            historyItems = history
         )
     }
 }
@@ -490,11 +646,15 @@ fun DefaultPreview() {
 )
 @Composable
 fun DarkPreview() {
+    val history = remember {
+        mutableStateListOf<String>()
+    }
     LabelMakerTheme {
         MainApp(
-            onPrint = {_, _ ->},
+            onPrint = { _, _ ->},
             onChangeSettings = {},
-            defaultQty = 2
+            defaultQty = 2,
+            historyItems = history
         )
     }
 }
