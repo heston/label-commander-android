@@ -11,8 +11,8 @@ android {
         applicationId = "com.hestonliebowitz.labelmaker"
         minSdk = 31
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -68,8 +68,6 @@ android {
     }
 }
 
-val ktor_version: String by project
-
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -91,8 +89,8 @@ dependencies {
     implementation(libs.androidx.material.icons)
 
     // https://ktor.io/docs/client-create-new-application.html#add-dependencies
-    implementation("io.ktor:ktor-client-core:$ktor_version")
-    implementation("io.ktor:ktor-client-cio:$ktor_version")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
 }
