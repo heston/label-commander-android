@@ -209,6 +209,10 @@ class MainActivity : ComponentActivity() {
                         hideKeyboard()
                         showSettings = true
                     },
+                    onTextChanged = { text ->
+                        historyItems.clear()
+                        historyItems.addAll(history.getByPrefix(text))
+                    },
                     defaultQty = 1,
                     historyItems = historyItems
                 )
@@ -240,6 +244,17 @@ class MainActivity : ComponentActivity() {
                                 )
                                 .show()
                         },
+                        populateTestList = {
+                            history.populateTestList()
+                            resetHistoryView()
+                            Toast
+                                .makeText(
+                                    applicationContext,
+                                    "Test list populated",
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        },
                         historyItems = historyItems
                     )
                 }
@@ -254,6 +269,7 @@ fun Settings(
     onSettingsChanged: (settings: Settings) -> Unit,
     onCancel: () -> Unit,
     resetHistory: () -> Unit,
+    populateTestList: () -> Unit,
     historyItems: SnapshotStateList<String>
 ) {
     var endpointValue by remember { mutableStateOf(settings.endpoint) }
@@ -329,6 +345,14 @@ fun Settings(
                     onClick = { showDialog = true }) {
                     Text(text = stringResource(R.string.reset_history))
                 }
+                if (com.hestonliebowitz.labelmaker.BuildConfig.DEBUG) {
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Button(
+                        onClick = { populateTestList() }
+                    ) {
+                        Text(text = "Populate Test List")
+                    }
+                }
                 if (showDialog) {
                     AlertDialog(
                         onDismissRequest = { showDialog = false },
@@ -369,6 +393,7 @@ fun SettingsPreview() {
             onSettingsChanged = {},
             onCancel = {},
             resetHistory = {},
+            populateTestList = {},
             historyItems = items
         )
     }
@@ -391,6 +416,7 @@ fun DarkSettingsPreview() {
             onSettingsChanged = {},
             onCancel = {},
             resetHistory = {},
+            populateTestList = {},
             historyItems = items
         )
     }
@@ -401,6 +427,7 @@ fun DarkSettingsPreview() {
 fun MainApp(
     onPrint: (value: String?, qty: Int) -> Unit,
     onChangeSettings: () -> Unit,
+    onTextChanged: (String) -> Unit = {},
     defaultQty: Int = 1,
     historyItems: SnapshotStateList<String> = mutableStateListOf()
 ) {
@@ -419,6 +446,7 @@ fun MainApp(
         lastTextValue = ""
         printQty = 1
         defaultTextChanged = false
+        onTextChanged("")
     }
 
     fun Modifier.horizontalFade(
@@ -496,7 +524,7 @@ fun MainApp(
                 actions = {
                     IconButton(
                         onClick = { reset() },
-                        modifier = Modifier.padding(start = 4.dp, end = 12.dp)
+                        modifier = Modifier.padding(start = 4.dp)
                     ) {
                         Icon(
                             Icons.Default.Delete,
@@ -511,7 +539,7 @@ fun MainApp(
                             onClick = { printQty = 1 },
                             shape = SegmentedButtonDefaults.itemShape(
                                 index = 0,
-                                count = 3
+                                count = 4
                             )
                         ) {
                             Text(stringResource(R.string.digit_1))
@@ -521,7 +549,7 @@ fun MainApp(
                             onClick = { printQty = 2 },
                             shape = SegmentedButtonDefaults.itemShape(
                                 index = 1,
-                                count = 3
+                                count = 4
                             )
                         ) {
                             Text(stringResource(R.string.digit_2))
@@ -531,17 +559,27 @@ fun MainApp(
                             onClick = { printQty = 3 },
                             shape = SegmentedButtonDefaults.itemShape(
                                 index = 2,
-                                count = 3
+                                count = 4
                             )
                         ) {
                             Text(stringResource(R.string.digit_3))
+                        }
+                        SegmentedButton(
+                            selected = printQty == 4,
+                            onClick = { printQty = 4 },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = 3,
+                                count = 4
+                            )
+                        ) {
+                            Text(stringResource(R.string.digit_4))
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     FloatingActionButton(
                         onClick = { submit() },
                         containerColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = 10.dp)
+                        modifier = Modifier.padding(end = 12.dp)
                     ) {
                         Icon(
                             Icons.Default.Print,
@@ -594,6 +632,7 @@ fun MainApp(
                     onValueChange = {
                         lastTextValue = it
                         defaultTextChanged = true
+                        onTextChanged(it)
                     },
                     modifier = Modifier
                         .padding(16.dp)
@@ -647,7 +686,7 @@ fun DefaultPreview() {
 @Composable
 fun DarkPreview() {
     val history = remember {
-        mutableStateListOf<String>()
+        mutableStateListOf("A recent label", "Another label", "Third", "Fourth")
     }
     LabelMakerTheme {
         MainApp(

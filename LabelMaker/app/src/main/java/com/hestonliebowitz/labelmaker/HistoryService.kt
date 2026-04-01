@@ -3,7 +3,7 @@ package com.hestonliebowitz.labelmaker
 import android.content.Context
 
 const val HISTORY_DELIMITER = "~"
-const val MAX_HISTORY_ITEMS = 10
+const val MAX_HISTORY_ITEMS = 100
 
 class HistoryService(private val ctx: Context) {
     private val _items : MutableList<String> = emptyList<String>().toMutableList()
@@ -19,6 +19,12 @@ class HistoryService(private val ctx: Context) {
             _items.addAll(history.split(HISTORY_DELIMITER))
         }
         return _items.toList()
+    }
+
+    fun getByPrefix(prefix: String): List<String> {
+        return getAll().filter {
+            it.startsWith(prefix, ignoreCase = true) || it.contains(" $prefix", ignoreCase = true)
+        }
     }
 
     fun save(value: String) {
@@ -53,6 +59,16 @@ class HistoryService(private val ctx: Context) {
         editor.putString(
             ctx.getString(R.string.pref_history),
             ""
+        )
+        editor.apply()
+    }
+
+    fun populateTestList() {
+        val prefs = ctx.getSharedPreferences(DEFAULT, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        editor.putString(
+            ctx.getString(R.string.pref_history),
+            "Chicken stock~Caesar dressing~ginger soy~pasta~salmon~chicken~chicken tenders"
         )
         editor.apply()
     }
