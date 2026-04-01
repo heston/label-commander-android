@@ -13,9 +13,10 @@
     <string name="empty_error">Enter a label first</string>
     <string name="label_printer_endpoint">Printer Endpoint</string>
     <string name="label_auth_token">Authorization Token</string>
-    <string name="digit_1">I</string>
-    <string name="digit_2">II</string>
-    <string name="digit_3">III</string>
+    <string name="digit_1">1</string>
+    <string name="digit_2">2</string>
+    <string name="digit_3">3</string>
+    <string name="digit_4">4</string>
     <string name="reset">Reset</string>
     <string name="reset_history">Delete All History</string>
     <string name="history_cleared">All history deleted</string>
