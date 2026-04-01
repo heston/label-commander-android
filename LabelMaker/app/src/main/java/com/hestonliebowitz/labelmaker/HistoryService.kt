@@ -22,8 +22,9 @@ class HistoryService(private val ctx: Context) {
     }
 
     fun getByPrefix(prefix: String): List<String> {
+        val cleanPrefix = prefix.trim();
         return getAll().filter {
-            it.startsWith(prefix, ignoreCase = true) || it.contains(" $prefix", ignoreCase = true)
+            it.startsWith(cleanPrefix, ignoreCase = true) || it.contains(" $cleanPrefix", ignoreCase = true)
         }
     }
 
@@ -68,7 +69,15 @@ class HistoryService(private val ctx: Context) {
         val editor = prefs.edit()
         editor.putString(
             ctx.getString(R.string.pref_history),
-            "Chicken stock~Caesar dressing~ginger soy~pasta~salmon~chicken~chicken tenders"
+            arrayOf(
+                "Chicken stock",
+                "Caesar dressing",
+                "ginger soy",
+                "pasta",
+                "salmon",
+                "chicken",
+                "fried chicken"
+            ).joinToString(HISTORY_DELIMITER)
         )
         editor.apply()
     }
