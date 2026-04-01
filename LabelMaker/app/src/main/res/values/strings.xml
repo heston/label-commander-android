@@ -20,6 +20,8 @@
     <string name="reset">Reset</string>
     <string name="reset_history">Delete All History</string>
     <string name="history_cleared">All history deleted</string>
+    <string name="test_history_populated">Test history loaded</string>
+    <string name="populate_test_history">Load Test History</string>
     <string name="confirm_deletion">Confirm Deletion</string>
     <string name="confirm_deletion_explanation">Are you sure you want to delete all label history? This action cannot be undone.</string>
     <string name="cancel">Cancel</string>

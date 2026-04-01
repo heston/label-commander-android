@@ -244,13 +244,13 @@ class MainActivity : ComponentActivity() {
                                 )
                                 .show()
                         },
-                        populateTestList = {
+                        populateTestHistory = {
                             history.populateTestList()
                             resetHistoryView()
                             Toast
                                 .makeText(
                                     applicationContext,
-                                    "Test list populated",
+                                    getString(R.string.test_history_populated),
                                     Toast.LENGTH_SHORT
                                 )
                                 .show()
@@ -269,7 +269,7 @@ fun Settings(
     onSettingsChanged: (settings: Settings) -> Unit,
     onCancel: () -> Unit,
     resetHistory: () -> Unit,
-    populateTestList: () -> Unit,
+    populateTestHistory: () -> Unit,
     historyItems: SnapshotStateList<String>
 ) {
     var endpointValue by remember { mutableStateOf(settings.endpoint) }
@@ -348,9 +348,9 @@ fun Settings(
                 if (com.hestonliebowitz.labelmaker.BuildConfig.DEBUG) {
                     Spacer(modifier = Modifier.size(8.dp))
                     Button(
-                        onClick = { populateTestList() }
+                        onClick = { populateTestHistory() }
                     ) {
-                        Text(text = "Populate Test List")
+                        Text(text = stringResource(R.string.populate_test_history))
                     }
                 }
                 if (showDialog) {
@@ -393,7 +393,7 @@ fun SettingsPreview() {
             onSettingsChanged = {},
             onCancel = {},
             resetHistory = {},
-            populateTestList = {},
+            populateTestHistory = {},
             historyItems = items
         )
     }
@@ -416,7 +416,7 @@ fun DarkSettingsPreview() {
             onSettingsChanged = {},
             onCancel = {},
             resetHistory = {},
-            populateTestList = {},
+            populateTestHistory = {},
             historyItems = items
         )
     }
