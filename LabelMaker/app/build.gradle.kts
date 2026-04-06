@@ -1,18 +1,19 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
     namespace = "com.hestonliebowitz.labelmaker"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.hestonliebowitz.labelmaker"
         minSdk = 31
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 6
-        versionName = "1.5"
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,7 +43,6 @@ android {
             )
 
             isDebuggable = false
-            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
@@ -50,18 +50,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
         resources {
