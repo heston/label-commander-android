@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,6 +33,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -78,7 +82,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.hestonliebowitz.labelmaker.ui.theme.LabelMakerTheme
+import com.hestonliebowitz.labelmaker.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
 import io.ktor.client.HttpClient
@@ -139,7 +143,7 @@ class MainActivity : ComponentActivity() {
             historyItems.addAll(history.getAll())
         }
 
-        fun fullSend(value: String?, qty: Int = 1) {
+        fun fullSend(value: String?, qty: Int = 1, template: String = "default") {
             if (value.isNullOrEmpty()) {
                 Toast
                     .makeText(
@@ -160,6 +164,7 @@ class MainActivity : ComponentActivity() {
                 val labelObj = JSONObject()
                 labelObj.put("body", value)
                 labelObj.put("qty", qty)
+                labelObj.put("template", template)
                 val requestBody = JSONObject()
                 requestBody.put("items", JSONArray(listOf(labelObj)))
 
@@ -200,11 +205,11 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            LabelMakerTheme {
+            AppTheme {
                 var showSettings by remember { mutableStateOf(initialShowSettings) }
                 MainApp(
-                    onPrint = { value, qty ->
-                        fullSend(value, qty)
+                    onPrint = { value, qty, template ->
+                        fullSend(value, qty, template)
                     },
                     onChangeSettings = {
                         hideKeyboard()
@@ -214,7 +219,6 @@ class MainActivity : ComponentActivity() {
                         historyItems.clear()
                         historyItems.addAll(history.getByPrefix(text))
                     },
-                    defaultQty = 1,
                     historyItems = historyItems
                 )
 
@@ -280,6 +284,7 @@ fun Settings(
     Surface(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
     ) {
         Column(
             modifier = Modifier
@@ -385,7 +390,7 @@ fun Settings(
 @Composable
 fun SettingsPreview() {
     val items = remember { mutableStateListOf<String>() }
-    LabelMakerTheme {
+    AppTheme {
         Settings(
             Settings(
                 endpoint = "https://foo.bar/baz",
@@ -408,7 +413,7 @@ fun SettingsPreview() {
 @Composable
 fun DarkSettingsPreview() {
     val items = remember { mutableStateListOf("Item") }
-    LabelMakerTheme {
+    AppTheme {
         Settings(
             Settings(
                 endpoint = "https://foo.bar/baz",
@@ -426,26 +431,33 @@ fun DarkSettingsPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(
-    onPrint: (value: String?, qty: Int) -> Unit,
+    onPrint: (value: String?, qty: Int, template: String) -> Unit,
     onChangeSettings: () -> Unit,
     onTextChanged: (String) -> Unit = {},
     defaultQty: Int = 1,
+    defaultTemplate: String = "default",
     historyItems: SnapshotStateList<String> = mutableStateListOf()
 ) {
     var lastTextValue by remember { mutableStateOf("") }
     var defaultTextChanged by remember { mutableStateOf(false) }
     var printQty by remember { mutableIntStateOf(defaultQty) }
+    var printTemplate by remember { mutableStateOf(defaultTemplate) }
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
 
     fun submit() {
         focusManager.clearFocus()
-        onPrint(if (defaultTextChanged) lastTextValue else null, printQty)
+        onPrint(
+            if (defaultTextChanged) lastTextValue else null,
+            printQty,
+            printTemplate
+        )
     }
 
     fun reset() {
         lastTextValue = ""
-        printQty = 1
+        printQty = defaultQty
+        printTemplate = defaultTemplate
         defaultTextChanged = false
         onTextChanged("")
     }
@@ -525,67 +537,24 @@ fun MainApp(
                 actions = {
                     IconButton(
                         onClick = { reset() },
-                        modifier = Modifier.padding(start = 4.dp)
                     ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = stringResource(R.string.reset),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp))
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
-                    Spacer(modifier = Modifier.weight(1f))
-                    SingleChoiceSegmentedButtonRow {
-                        SegmentedButton(
-                            selected = printQty == 1,
-                            onClick = { printQty = 1 },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = 0,
-                                count = 4
-                            )
-                        ) {
-                            Text(stringResource(R.string.digit_1))
-                        }
-                        SegmentedButton(
-                            selected = printQty == 2,
-                            onClick = { printQty = 2 },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = 1,
-                                count = 4
-                            )
-                        ) {
-                            Text(stringResource(R.string.digit_2))
-                        }
-                        SegmentedButton(
-                            selected = printQty == 3,
-                            onClick = { printQty = 3 },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = 2,
-                                count = 4
-                            )
-                        ) {
-                            Text(stringResource(R.string.digit_3))
-                        }
-                        SegmentedButton(
-                            selected = printQty == 4,
-                            onClick = { printQty = 4 },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = 3,
-                                count = 4
-                            )
-                        ) {
-                            Text(stringResource(R.string.digit_4))
-                        }
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
+                },
+                floatingActionButton = {
                     FloatingActionButton(
                         onClick = { submit() },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = 12.dp)
+                        containerColor = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(
-                            Icons.Default.Print,
+                            imageVector = Icons.Default.Print,
                             contentDescription = stringResource(R.string.print),
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
@@ -595,7 +564,9 @@ fun MainApp(
         Column(
             modifier = Modifier
                 .padding(contentPadding)
+                .fillMaxSize()
         ) {
+            // 1. History Chips
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -623,10 +594,11 @@ fun MainApp(
                     }
                 }
             }
+            // 2. Text Input Area
             Surface(
                 modifier = Modifier
                     .padding(0.dp)
-                    .fillMaxHeight()
+                    .weight(1f)
                     ) {
                 BasicTextField(
                     value = lastTextValue,
@@ -659,6 +631,78 @@ fun MainApp(
                     }
                 )
             }
+            // 3. Print Settings
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // 1. Quantity Row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.quantity_label),
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.width(80.dp)
+                        )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
+                            val quantities = listOf(1, 2, 3, 4) // Easily add more here
+                            quantities.forEachIndexed { index, qty ->
+                                SegmentedButton(
+                                    selected = printQty == qty,
+                                    onClick = { printQty = qty },
+                                    shape = SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = quantities.size
+                                    )
+                                ) {
+                                    Text(qty.toString())
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. Template Row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.style_label),
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.width(80.dp)
+                        )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
+                            SegmentedButton(
+                                selected = printTemplate == "default",
+                                onClick = { printTemplate = "default" },
+                                shape = SegmentedButtonDefaults.itemShape(0, 2),
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Restaurant,
+                                        contentDescription = stringResource(R.string.food_label)
+                                    )
+                                },
+                                label = {
+                                    Text(stringResource(R.string.food_label))
+                                })
+                            SegmentedButton(
+                                selected = printTemplate == "simple",
+                                onClick = { printTemplate = "simple" },
+                                shape = SegmentedButtonDefaults.itemShape(1, 2),
+                                icon = {
+                                    Icon(
+                                        Icons.Default.TextFormat,
+                                        contentDescription = stringResource(R.string.simple_label)
+                                    )
+                                },
+                                label = {
+                                    Text(stringResource(R.string.simple_label))
+                                }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -669,9 +713,9 @@ fun DefaultPreview() {
     val history = remember {
         mutableStateListOf("A recent label", "Another label", "Third", "Fourth")
     }
-    LabelMakerTheme {
+    AppTheme {
         MainApp(
-            onPrint = { _, _ ->},
+            onPrint = { _, _, _ ->},
             onChangeSettings = {},
             defaultQty = 3,
             historyItems = history
@@ -689,9 +733,9 @@ fun DarkPreview() {
     val history = remember {
         mutableStateListOf("A recent label", "Another label", "Third", "Fourth")
     }
-    LabelMakerTheme {
+    AppTheme {
         MainApp(
-            onPrint = { _, _ ->},
+            onPrint = { _, _, _ ->},
             onChangeSettings = {},
             defaultQty = 2,
             historyItems = history

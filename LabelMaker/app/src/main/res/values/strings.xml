@@ -25,4 +25,8 @@
     <string name="confirm_deletion">Confirm Deletion</string>
     <string name="confirm_deletion_explanation">Are you sure you want to delete all label history? This action cannot be undone.</string>
     <string name="cancel">Cancel</string>
+    <string name="quantity_label">Quantity</string>
+    <string name="style_label">Style</string>
+    <string name="food_label">Food</string>
+    <string name="simple_label">Plain</string>
 </resources>
